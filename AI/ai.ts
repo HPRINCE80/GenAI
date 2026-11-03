@@ -2,6 +2,7 @@ import { ChatGroq } from "@langchain/groq";
 import { config } from "dotenv";
 import rl from "readline/promises";
 config();
+import tool from "langchain"
 
 const model = new ChatGroq({
   model: "openai/gpt-oss-120b",
@@ -12,6 +13,22 @@ const readline = rl.createInterface({
   input: process.stdin,
   output: process.stdout,
 });
+
+const events = []
+
+const createEventTool = tool(
+    async function ({  date, title, description}) {
+        events.push({
+            date,
+            title,
+            description
+        })
+        return "Event Created"
+    },{
+        name:"createEvent",
+        description: "create a new event with a date , title & description"
+    }
+)
 
 type Msg = { role: "user" | "assistant" | "system"; content: string };
 const messages: Msg[] = [];
