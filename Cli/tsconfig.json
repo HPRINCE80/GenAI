@@ -5,11 +5,12 @@
     "moduleResolution": "NodeNext",
     "rootDir": ".",
     "outDir": "dist",
+    "allowJs": true,
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true
   },
-  "include": ["cli.ts", "src/**/*.ts"],
+  "include": ["cli.js", "src/**/*.js"],
   "exclude": ["node_modules", "dist"]
 }
