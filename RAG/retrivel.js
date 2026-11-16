@@ -1,60 +1,47 @@
-import {ChatCohere, CohereEmbeddings} from "@langchain/cohere"
-import "dotenv/config"
-import {Pincone} from "@pincone-database/pinecone"
-import {HumanMessage, ToolMessage, AIMessage} from "langchain"
+import { ChatCohere, CohereEmbeddings } from "@langchain/cohere";
+import { Pinecone } from "@pinecone-database/pinecone";
+import { HumanMessage } from "@langchain/core/messages";
+import "dotenv/config";
 
-
-const userInput = "How was the Arav's first job experience ?"
-
+const userInput = "How was Arav's first job experience?";
 
 const embeddings = new CohereEmbeddings({
-    apiKey: process.env.COHERE_API_KEY,
-    model:'embed-v5.0-fast',
-})
+  apiKey: process.env.COHERE_API_KEY,
+  model: "embed-english-v3.0",
+});
 
+const vector = await embeddings.embedQuery(userInput);
+console.log("Query vector dimension:", vector.length); // should be 1024
 
-const vector = await embeddings.embedQuery(userInput)
-
-
-const pc = new Pincone({apiKey : process.env.PINECONE_API_KEY});
-const index = pc.Index({
-    name: "cohort-rag",
-    host: "https://cohort-rag-xg6uzh1.svc.aped-4627-b74a.pinecone.io"
+const pc = new Pinecone({ apiKey: process.env.PINECONE_API_KEY });
+const index = pc.index({
+  host: "first-rag-3roy8zg.svc.aped-4627-b74a.pinecone.io",
 });
 
 const results = await index.documents.search({
-    topK: 3,
-    scoreBy:[
-        {
-            type: 'dense_vector',
-            fields: ['embedding'],
-            values: vector,
-        }
-    ],
-    includeFields: ['content']
-})
+  topK: 3,
+  scoreBy: [{
+    type: "dense_vector",
+    field: "embedding",
+    values: vector,
+  }],
+  includeFields: ["content"],
+});
 
-
+const context = results.matches
+  .map((match) => match.content)
+  .filter(Boolean)
+  .join("\n\n");
 
 const model = new ChatCohere({
-    model: "command-a-03-2025",
-    apiKey: process.env.COHERE_API_KEY
-})
+  model: "command-a-03-2025",
+  apiKey: process.env.COHERE_API_KEY,
+});
 
-const message = [];
+const response = await model.invoke([
+  new HumanMessage(
+    `Answer the question using the context below. If the context doesn't contain the answer, say so.\n\nContext:\n${context}\n\nQuestion: ${userInput}`
+  ),
+]);
 
-
-message.push(new HumanMessage(userInput))
-
-
-message.push(new ToolMessage({
-    content:JSON.stringify(results)
-}))
-
-
-const aiResponse = await model.stream(message)
-
-
-for await (const chunk of aiResponse) {
-    process.stdout.write(chunk.text)
-}
+console.log(response.content);

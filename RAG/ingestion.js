@@ -1,47 +1,50 @@
-import {PDFParse} from "pdf-parse"
-import {parse} from "path"
-import "dotenv/config"
-import fs from "fs/promises"
-import {Pinecone} from "@pinecone-database/pinecone";
+import { PDFParse } from "pdf-parse";
+import "dotenv/config";
+import fs from "fs/promises";
+import { Pinecone } from "@pinecone-database/pinecone";
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
-import { CohereEmbeddings } from "@langchain/cohere"
+import { CohereEmbeddings } from "@langchain/cohere";
 
-
+// ...PDF parsing and chunking...
 const parser = new PDFParse({
-    data: await fs.readFile("./story.pdf")
-})
+  data: await fs.readFile("./story.pdf"),
+});
 
-const text = (await parser.getText({ pageJoiner: "" })).text;
+const { text } = await parser.getText({ pageJoiner: "" });
+await parser.destroy();
 
 const textSplitter = new RecursiveCharacterTextSplitter({
-    chunkSize:500,
-    chunkOverlap:100,
+  chunkSize: 500,
+  chunkOverlap: 100,
 });
 
 const chunks = await textSplitter.splitText(text);
 
-
 const embeddings = new CohereEmbeddings({
-    model : "embed-v5.0-fast",
-    apiKey: process.env.COHERE_API_KEY
-})
-
-const vectors = await embeddings.embedDocuments(chunks)
-
-
-const pc = new Pinecone({apiKey: process.env.PINECONE_API_KEY});
-
-const index = pc.Index({
-    name:"cohort-rag",
-    host:"https://cohort-rag-xg6uzh1.svc.aped-4627-b74a.pinecone.io"
+  model: "embed-english-v3.0",
+  apiKey: process.env.COHERE_API_KEY,
 });
 
+const vectors = await embeddings.embedDocuments(chunks);
+console.log("Vector dimension:", vectors[0]?.length); // 1024 hona chahiye
+
+if (vectors.some((vector) => vector.length !== 1024)) {
+  throw new Error("Embedding dimension index ke 1024 dimensions se match nahi karti.");
+}
+
+
+
+const pc = new Pinecone({ apiKey: process.env.PINECONE_API_KEY });
+
+// ...Pinecone client and index...
+const index = pc.Index({
+    name: "first-rag",
+    host: "https://first-rag-3roy8zg.svc.aped-4627-b74a.pinecone.io"
+});
 await index.documents.upsert({
-    documents: vectors.map((vector, index) => {
-        return {
-            _id: `chunk-${index}`,
-            embeddings: vector,
-            content: chunks[index]
-        }
-    })
-})
+  documents: vectors.map((vector, i) => ({
+    _id: `chunk-${i}`,
+    embedding: vector,
+    content: chunks[i],
+  })),
+});
