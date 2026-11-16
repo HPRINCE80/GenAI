@@ -3,7 +3,7 @@ import { Pinecone } from "@pinecone-database/pinecone";
 import { HumanMessage } from "@langchain/core/messages";
 import "dotenv/config";
 
-const userInput = "How was Arav's first job experience?";
+const userInput = "can you share prince portfolio link ?";
 
 const embeddings = new CohereEmbeddings({
   apiKey: process.env.COHERE_API_KEY,
