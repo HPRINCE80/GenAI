@@ -3,7 +3,7 @@ import { Pinecone } from "@pinecone-database/pinecone";
 import { HumanMessage } from "@langchain/core/messages";
 import "dotenv/config";
 
-const userInput = "can you share prince portfolio link ?";
+const userInput = "can you share prince projects ?";
 
 const embeddings = new CohereEmbeddings({
   apiKey: process.env.COHERE_API_KEY,
@@ -11,7 +11,7 @@ const embeddings = new CohereEmbeddings({
 });
 
 const vector = await embeddings.embedQuery(userInput);
-console.log("Query vector dimension:", vector.length); // should be 1024
+// console.log("Query vector dimension:", vector.length); // should be 1024
 
 const pc = new Pinecone({ apiKey: process.env.PINECONE_API_KEY });
 const index = pc.index({
